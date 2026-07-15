@@ -45,3 +45,6 @@ macs2_genome: "hs"                   # MACS2 -g for relaxed calls
 gtf: "ref/gencode.v36.annotation.gtf"          # for TSS enrichment (chr-prefixed GENCODE)
 promoter_bed: "ref/promoter_chr1-22X.bed"       # reads-in-annotation QC
 enhancer_bed: "ref/enhancer_chr1-22X.bed"
+
+# Optional footprinting stage (footprint_all) — placeholder motif for the .test DAG
+jaspar_motifs: "ref/JASPAR_test.jaspar"

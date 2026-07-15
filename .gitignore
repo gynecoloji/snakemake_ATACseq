@@ -10,6 +10,9 @@
 *.jar
 ref/BOWTIE2/
 ref/ENSEMBL/
+# JASPAR motif download for the optional footprinting stage (anchored to ref/, so
+# the tiny .test/ref/ placeholder stays tracked)
+ref/JASPAR*
 # FANTOM5 CAGE download + the alternative-TSS promoter BEDs derived from it and the
 # GTF (regenerate with `python ref/build_promoter_beds.py all`; the legacy transcript
 # set Promoter_UCSC_hg38_*bp stays tracked).

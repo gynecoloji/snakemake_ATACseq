@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Optional TOBIAS TF-footprinting stage** (`footprint_all` target,
+  `workflow/rules/footprint.smk`): pools replicate BAMs per condition (from the
+  sample sheet's `type` column), removes Tn5 insertion bias (`ATACorrect`),
+  scores footprints (`ScoreBigwig`), and reports differential TF binding across
+  conditions from JASPAR motifs (`BINDetect`). Opt-in — not part of the default
+  run. Adds the `jaspar_motifs` config key and the `tobias` conda environment.
+
+### Fixed
+
+- The QC RPGC bedgraph (`deeptools_bedgraph`) now excludes blacklist regions
+  (`--blackListFileName`), matching the primary `create_bigwig` coverage track.
+
 ## [1.0.0] - 2026-07-14
 
 First release: an ATAC-seq Snakemake workflow with **RPGC depth-normalized**

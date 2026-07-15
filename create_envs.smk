@@ -11,7 +11,7 @@
 # files, same --conda-prefix). If content differs, Snakemake just rebuilds that
 # one env at runtime — no hard failure.
 
-ENVS = ["snakemake", "deeptools", "macs2", "idr", "bedtools"]
+ENVS = ["snakemake", "deeptools", "macs2", "idr", "bedtools", "tobias"]
 
 rule all:
     input:

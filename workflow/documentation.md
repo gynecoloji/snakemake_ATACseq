@@ -19,6 +19,10 @@ DAG** covering two stages in dependency order:
 2. **QC** (`qc_all` target) — deepTools QC, FRiP, IDR, library complexity,
    TSS enrichment, and an interactive HTML QC report.
 
+An **optional** third stage, **TF footprinting** (`footprint_all` target,
+`workflow/rules/footprint.smk`), is **not** in the default DAG — run it on demand
+after the primary stage (see [Steps (footprinting stage, optional)](#steps-footprinting-stage-optional)).
+
 ## Inputs
 
 | Input | Location | Notes |
@@ -58,6 +62,23 @@ TSS-enrichment score, FRiP, IDR on relaxed peaks, library complexity
 (NRF/PBC1/PBC2), reads-in-annotation and peak summaries, a FastQC-only MultiQC
 report, and a self-contained interactive HTML QC report
 (`results/qc/atacseq_qc_report.html`).
+
+## Steps (footprinting stage, optional)
+
+Opt-in TOBIAS differential TF footprinting (`footprint_all` target); requires a
+JASPAR motif file at `config['jaspar_motifs']`. Conditions are the sample
+sheet's `type` values.
+
+1. **`footprint_merge_condition`** — `samtools merge` the blacklist-filtered BAMs
+   of each condition into one pooled BAM.
+2. **`tobias_atacorrect`** — model + remove Tn5 insertion bias over the consensus
+   peaks → bias-corrected signal bigWig per condition.
+3. **`tobias_scorebigwig`** — footprint-score track per condition.
+4. **`tobias_bindetect`** — scan JASPAR motifs across conditions → differential
+   TF-binding table, volcano figures, and per-TF footprints/BEDs
+   (`results/footprint/bindetect/`).
+
+Run with: `snakemake -s workflow/Snakefile --use-conda --cores N footprint_all`.
 
 ## Outputs
 

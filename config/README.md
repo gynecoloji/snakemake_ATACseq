@@ -63,6 +63,8 @@ paths in `config.yaml`:
 - `ref/gencode.v36.annotation.gtf` — GENCODE annotation (for TSS QC)
 - `ref/hg38.2bit` — for `computeGCBias`
 - `ref/picard.jar` — Picard (used by MarkDuplicates)
+- `ref/JASPAR2024_CORE_vertebrates.jaspar` — **optional**, only for the `footprint_all`
+  (TOBIAS) stage; JASPAR-format motifs pointed to by `jaspar_motifs` (see the top-level README)
 
 The Bowtie2 index (`ref/BOWTIE2/`) is built automatically by the
 `build_genome_index` rule from `human_fasta`.

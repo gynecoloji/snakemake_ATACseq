@@ -20,8 +20,12 @@ configfile: "config/config.yaml"
 include: "rules/common.smk"
 include: "rules/atacseq.smk"
 include: "rules/qc.smk"
+include: "rules/footprint.smk"
 
 
+# Default target = primary pipeline + QC. The optional TOBIAS footprinting stage
+# (rules/footprint.smk) is deliberately NOT included here; run it on demand with
+# the `footprint_all` target once the primary pipeline's outputs exist.
 rule all:
     input:
         rules.atacseq_all.input,

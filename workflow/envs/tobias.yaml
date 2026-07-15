@@ -1,0 +1,12 @@
+# Conda environment for the optional TOBIAS footprinting stage
+# (workflow/rules/footprint.smk). Unlike the other env files (which ship
+# fully-pinned conda exports), this is a minimal spec that Snakemake solves at
+# runtime on first --use-conda invocation of the footprint_all target.
+name: tobias
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - tobias
+  - samtools

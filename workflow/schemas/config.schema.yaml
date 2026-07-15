@@ -126,6 +126,14 @@ properties:
     description: Enhancer BED used for the reads-in-annotation QC.
     default: ref/enhancer_chr1-22X.bed
 
+  jaspar_motifs:
+    type: string
+    description: >-
+      JASPAR-format motif file for the optional TOBIAS footprinting stage
+      (footprint_all target). Download the JASPAR CORE vertebrates PFMs into ref/
+      (see README). Not used by the primary or QC pipelines.
+    default: ref/JASPAR2024_CORE_vertebrates.jaspar
+
 required:
   - samples_table
   - human_fasta

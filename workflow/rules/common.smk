@@ -38,6 +38,9 @@ BIGWIG_DIR         = f"{RESULT_DIR}/bigwig"
 RELAXED_PEAKS_DIR  = f"{RESULT_DIR}/peaks_relaxed"
 CONSENSUS_DIR      = f"{RESULT_DIR}/consensus"
 
+# ── Footprinting (optional TOBIAS stage) directory ──────────────────────
+FOOTPRINT_DIR      = f"{RESULT_DIR}/footprint"
+
 # ── QC-pipeline directories (aliases + QC-only outputs) ─────────────────
 RMD_BAM_DIR    = BLACKLIST_FILTERED_DIR   # QC alias: results/blacklist_filtered
 PEAK_DIR       = PEAKS_DIR                 # QC alias: results/peaks
@@ -59,6 +62,11 @@ PEAK_TYPES   = config.get("peak_types", ["narrowPeak"])
 
 # ── Conditions (groups) and per-condition reproducibility method ────────
 GROUPS = samples_df.groupby("group")["sample_id"].apply(list).to_dict()
+
+# Biological conditions for the optional footprinting stage: samples pooled by
+# the sample sheet's `type` column (e.g. Control, NICD3). Used only by
+# rules/footprint.smk (the footprint_all target).
+CONDITIONS = samples_df.groupby("type")["sample_id"].apply(list).to_dict()
 
 def _repro_method(members):
     n = len(members)

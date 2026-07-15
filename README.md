@@ -47,13 +47,14 @@ A comprehensive Snakemake workflow for processing and analyzing ATAC-seq data fr
 
 ## Overview
 
-This pipeline integrates three complementary components for complete ATAC-seq analysis:
+This pipeline integrates four complementary components for complete ATAC-seq analysis:
 
 1. **Primary ATAC-seq stage** (`atacseq_all` target) - Raw FASTQ → Bowtie2 alignment to the human genome → filtering → MACS2 peak calling → **depth-normalized (RPGC) coverage tracks** → a reproducible, fixed-width **consensus peak set** with a fragment-count matrix
 2. **ATAC-seq QC stage** (`qc_all` target) - deepTools QC, FRiP, IDR, library complexity, TSS enrichment score, a self-contained **interactive HTML QC report** (all QC except FastQC), plus a FastQC-only MultiQC
 
 Both stages live in a single standard-layout `workflow/Snakefile`: one `snakemake --use-conda` run builds the primary stage **and** the QC report in dependency order (unified DAG). Run a subset with the `atacseq_all` or `qc_all` targets. The layout follows the [Snakemake Workflow Catalog](https://snakemake.github.io/snakemake-workflow-catalog/) conventions, so the workflow can be deployed into another project with `snakedeploy deploy-workflow` (see [Deploying with snakedeploy](#deploying-with-snakedeploy)).
 3. **Differential Analysis Notebook** (`ATACseq_Dx.ipynb`, R / Bioconductor) - **DESeq2** differential binding (NICD3 vs Ctrl) on the consensus count matrix — split into **promoter vs distal** peaks with a **paired** design under **default (median-of-ratios) normalization** — plus **Gviz genome-browser tracks** at Notch target loci as a positive control; runs on the `atacseq-diffbind` container
+4. **TF footprinting stage** (`footprint_all` target, **optional**) - **TOBIAS** differential transcription-factor footprinting: pools replicate BAMs per condition, models and removes Tn5 insertion bias (`ATACorrect`), scores footprints (`ScoreBigwig`), and scans **JASPAR** motifs for **differential TF binding** between conditions (`BINDetect`). Opt-in and not part of the default run (see [TF footprinting](#4-tf-footprinting-optional-footprint_all-target))
 
 ## Workflow Diagram
 
@@ -145,6 +146,33 @@ performs the differential test end-to-end:
 
 The executed notebook is generated from `workflow/scripts/build_diffbind_notebook.py`
 (helpers in `workflow/scripts/diffbind_helpers.R`).
+
+### 4. TF Footprinting (optional, `footprint_all` target)
+
+An **opt-in** [TOBIAS](https://github.com/loosolab/TOBIAS) stage
+(`workflow/rules/footprint.smk`) for **differential transcription-factor footprinting**. It is
+**not** part of the default run — build it explicitly, after the primary pipeline's outputs
+exist:
+
+```bash
+snakemake -s workflow/Snakefile --use-conda --cores 16 footprint_all
+```
+
+Conditions are the distinct values of the sample sheet's `type` column (e.g. `Control`, `NICD3`).
+Per condition it pools the replicate blacklist-filtered BAMs, then:
+
+- **`ATACorrect`** — models and removes the **Tn5 insertion-sequence bias** over the consensus
+  peaks (the rigorous alternative to a fixed +4/−5 bp shift), producing a bias-corrected signal.
+- **`ScoreBigwig`** — computes a footprint-score track over the consensus regions.
+- **`BINDetect`** — scans the **JASPAR** motifs across both conditions and reports **differential
+  TF binding** (a ranked `bindetect_results.txt`, volcano figures, and per-TF aggregate footprint
+  plots + bound/unbound BEDs) → `results/footprint/bindetect/`.
+
+Requires a JASPAR-format motif file at `config['jaspar_motifs']` (download the JASPAR CORE
+vertebrates PFMs into `ref/` — see [Reference files: download & generate](#reference-files-download--generate))
+and the `tobias` conda environment (built automatically on first `--use-conda`). Reuses the
+primary pipeline's `results/blacklist_filtered/*.nobl.bam`, `results/consensus/consensus_peaks.bed`,
+the genome FASTA, and the blacklist.
 
 ## Requirements
 
@@ -240,6 +268,12 @@ curl -L -o FANTOM5_CAGE_peaks_hg38.bed.gz \
 
 # Picard (MarkDuplicates)
 curl -L -o picard.jar https://github.com/broadinstitute/picard/releases/latest/download/picard.jar
+
+# JASPAR CORE vertebrates motifs — OPTIONAL: only needed for the footprint_all
+# (TOBIAS) stage. From https://jaspar.elifesciences.org/downloads/ get the
+# "CORE > vertebrates > non-redundant > PFMs (JASPAR format)" file:
+curl -L -o JASPAR2024_CORE_vertebrates.jaspar \
+  "https://jaspar.elifesciences.org/download/data/2024/CORE/JASPAR2024_CORE_vertebrates_non-redundant_pfms_jaspar.txt"
 
 cd ..
 ```

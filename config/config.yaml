@@ -45,3 +45,9 @@ macs2_genome: "hs"                   # MACS2 -g for relaxed calls
 gtf: "ref/gencode.v36.annotation.gtf"          # for TSS enrichment (chr-prefixed GENCODE)
 promoter_bed: "ref/promoter_chr1-22X.bed"       # reads-in-annotation QC
 enhancer_bed: "ref/enhancer_chr1-22X.bed"
+
+# ── Optional footprinting stage (workflow/rules/footprint.smk, footprint_all) ──
+# JASPAR-format motif file for TOBIAS BINDetect. Only needed if you run the
+# footprint_all target. Download the JASPAR CORE vertebrates PFMs into ref/ (see
+# the README "Footprinting" section).
+jaspar_motifs: "ref/JASPAR2024_CORE_vertebrates.jaspar"
