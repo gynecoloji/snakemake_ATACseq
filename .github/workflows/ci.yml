@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install snakemake pytest numpy pandas
+      - name: Unit tests
+        run: python -m pytest tests/ -q
+      - name: Stub inputs
+        # Create empty placeholder reads + reference files so the DAG resolves in
+        # a dry run (no rule is executed, so 0-byte files are fine).
+        run: |
+          mkdir -p data ref/BOWTIE2
+          python - <<'PY'
+          import csv, pathlib
+          for r in csv.DictReader(open("config/samples.csv")):
+              s = r["sample_id"]
+              for suf in ("_R1_001.fastq.gz", "_R2_001.fastq.gz"):
+                  pathlib.Path(f"data/{s}{suf}").touch()
+          PY
+          touch ref/hg38.fa ref/hg38.2bit \
+                ref/gencode.v36.annotation.gtf ref/picard.jar
+      - name: Dry run (DAG builds + config validates)
+        run: snakemake -s workflow/Snakefile -n --cores 1
+      - name: Lint (informational)
+        continue-on-error: true
+        run: snakemake -s workflow/Snakefile --lint

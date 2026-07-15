@@ -1,0 +1,29 @@
+# ATAC-seq (depth-normalized) + consensus + QC — Snakemake Workflow Catalog
+# entry point. A single `snakemake --use-conda` builds the primary pipeline AND
+# the QC report in dependency order (unified DAG). Run a subset with the
+# `atacseq_all` or `qc_all` targets:
+#
+#   snakemake --use-conda --cores 20                 # everything (primary → QC)
+#   snakemake --use-conda --cores 20 atacseq_all     # primary pipeline only
+#   snakemake --use-conda --cores 20 qc_all          # QC only (after primary)
+#
+# Reference genomes/annotation are provided by the user under ref/ (see README).
+
+from snakemake.utils import min_version
+
+min_version("8.0")
+
+
+configfile: "config/config.yaml"
+
+
+include: "rules/common.smk"
+include: "rules/atacseq.smk"
+include: "rules/qc.smk"
+
+
+rule all:
+    input:
+        rules.atacseq_all.input,
+        rules.qc_all.input,
+    default_target: True

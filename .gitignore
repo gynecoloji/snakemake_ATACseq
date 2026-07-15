@@ -1,0 +1,75 @@
+# ── Reference genomes, indexes, large annotations (provide/build locally) ──
+*.fa
+*.fa.gz
+*.fai
+*.2bit
+*.bt2
+*.bt2l
+*.ht2
+*.gtf
+*.jar
+ref/BOWTIE2/
+ref/ENSEMBL/
+# FANTOM5 CAGE download + the alternative-TSS promoter BEDs derived from it and the
+# GTF (regenerate with `python ref/build_promoter_beds.py all`; the legacy transcript
+# set Promoter_UCSC_hg38_*bp stays tracked).
+# ref/FANTOM5_CAGE_peaks_hg38.bed.gz
+# ref/Promoter_uniqueTSS_hg38_*bp_chr1-22X.bed
+# ref/Promoter_MANEcanonical_hg38_*bp_chr1-22X.bed
+# ref/Promoter_FANTOM5CAGE_hg38_*bp_chr1-22X.bed
+ref/FANTOM5_CAGE_peaks_hg38.bed.gz
+
+# ── Raw data & pipeline outputs ──
+data/*
+!data/.gitkeep
+results/
+logs/
+temp/
+*.bam
+*.bai
+*.sam
+*.bw
+*.bigwig
+*.bedgraph
+
+# ── Copyrighted / vendor documents (do NOT redistribute) ──
+*.pdf
+
+# ── Internal design docs & workflow scratch ──
+docs/
+.superpowers/
+.snakemake/
+
+# ── Python / pytest ──
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.Python
+env/
+venv/
+ENV/
+
+# ── OS & editor ──
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# docker images
+*.sif
+
+# ── Snakemake Workflow Catalog test fixture (.test/) ──
+# .test/ ships tiny EMPTY placeholder reference/read files so the catalog can
+# build the rulegraph for the tube map (snakemake -d .test --forceall --rulegraph);
+# the command never reads them, so 0-byte files suffice. Force-track the ones
+# whose extensions are ignored above.
+!.test/ref/*.fa
+!.test/ref/*.gtf
+!.test/ref/*.2bit
+

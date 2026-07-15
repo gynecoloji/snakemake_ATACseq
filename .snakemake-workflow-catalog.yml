@@ -1,0 +1,20 @@
+# Snakemake Workflow Catalog metadata.
+# https://snakemake.github.io/snakemake-workflow-catalog/
+
+usage:
+  mandatory-flags:
+    desc: >
+      Always run with --use-conda so each rule gets its pinned per-rule
+      environment (the tools need incompatible Python versions:
+      idr=3.6, macs2=3.7, snakemake/deeptools=3.12). A single
+      `snakemake --use-conda` builds the primary pipeline and the QC report
+      end-to-end; run subsets with the `atacseq_all` or `qc_all` targets.
+      Before running, download the reference data into ref/ as described in the
+      README: the human genome FASTA (chr-prefixed UCSC hg38), the ENCODE hg38
+      blacklist BED, a GENCODE GTF, hg38.2bit, and picard.jar.
+    flags: "--use-conda"
+  software-stack-deployment:
+    conda: true
+    apptainer: true
+    apptainer+conda: true
+  report: false

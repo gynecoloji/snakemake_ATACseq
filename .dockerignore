@@ -1,0 +1,23 @@
+# Keep the Docker build context small: exclude large/generated data.
+# (Genomes, FASTQs and outputs are mounted at runtime, not copied into the image.)
+
+.git
+.gitignore
+.snakemake
+.superpowers
+.test
+data
+results
+logs
+docs
+tests/.pytest_cache
+**/__pycache__
+*.pdf
+*.ipynb
+*.svg
+*.mermaid
+
+# ref/: reference DATA (genomes, indexes, annotations, BEDs) is provided at
+# runtime via the bind mount, never baked into the image. The workflow code
+# (workflow/) and config (config/) are copied by the Dockerfile.
+ref/

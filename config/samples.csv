@@ -1,0 +1,7 @@
+sample_id,type,group
+GSF4007-Control_1_S11,Control,group1
+GSF4007-Control_2_S13,Control,group1
+GSF4007-Control_3_S15,Control,group1
+GSF4007-NICD3-V5_1_S12,NICD3,group2
+GSF4007-NICD3-V5_2_S14,NICD3,group2
+GSF4007-NICD3-V5_3_S16,NICD3,group2

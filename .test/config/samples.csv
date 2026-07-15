@@ -1,0 +1,5 @@
+sample_id,type,group
+test_ctrl_1,Control,group1
+test_ctrl_2,Control,group1
+test_trt_1,Treatment,group2
+test_trt_2,Treatment,group2

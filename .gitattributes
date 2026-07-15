@@ -1,0 +1,19 @@
+# ── Language statistics ─────────────────────────────────────────────────
+# Keep the large executed notebook, generated artifacts, and reference BEDs out
+# of GitHub's language bar so the repo reads as Snakemake/Python (not Jupyter).
+ATACseq_Dx.ipynb        linguist-documentation
+images/rulegraph.svg    linguist-generated
+ref/*.bed               linguist-generated
+.test/**                linguist-generated
+
+# ── Line endings ────────────────────────────────────────────────────────
+# Normalize all text to LF; shell scripts and Snakemake files MUST stay LF so
+# they work in the Linux containers.
+* text=auto eol=lf
+*.sh        text eol=lf
+*.py        text eol=lf
+*.R         text eol=lf
+*.smk       text eol=lf
+Snakefile   text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
