@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1](https://github.com/gynecoloji/snakemake_ATACseq/compare/v1.1.0...v1.1.1) (2026-07-15)
+
+
+### Documentation
+
+* restructure README usage-first and fold footprinting into the workflow tube map ([1d9489a](https://github.com/gynecoloji/snakemake_ATACseq/commit/1d9489a46f328c07fb0c86919bf344fecf77ee58))
+
 ## [Unreleased]
 
 ## [1.1.0] - 2026-07-14
