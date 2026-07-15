@@ -24,3 +24,7 @@ keywords:
 # release (via the annotations below) — do not edit them by hand.
 version: "1.0.0" # x-release-please-version
 date-released: "2026-07-14" # x-release-please-date
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21366531"
+    description: "Concept DOI (resolves to the latest version)"

@@ -1,11 +1,12 @@
 [![CI](https://github.com/gynecoloji/snakemake_ATACseq/actions/workflows/ci.yml/badge.svg)](https://github.com/gynecoloji/snakemake_ATACseq/actions/workflows/ci.yml)
+[![DOI](https://zenodo.org/badge/1301075636.svg)](https://doi.org/10.5281/zenodo.21366531)
 
 ## Citation
 
 If you use this workflow in your research, please cite it. Use the **"Cite this
 repository"** button on the GitHub repository page (generated from
-[`CITATION.cff`](CITATION.cff)). A DOI will be minted for the archived release on
-the first tagged release.
+[`CITATION.cff`](CITATION.cff)), or cite the archived release on Zenodo via the DOI
+badge above — the concept DOI always resolves to the latest version.
 
 **Please also cite the individual tools used:**
 - **Snakemake**: Köster, J. and Rahmann, S. (2012). Snakemake—a scalable bioinformatics workflow engine. Bioinformatics, 28(19), 2520-2522.
