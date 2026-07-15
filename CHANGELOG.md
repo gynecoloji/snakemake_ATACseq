@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/gynecoloji/snakemake_ATACseq/compare/v1.0.0...v1.1.0) (2026-07-15)
+
+
+### Added
+
+* add optional TOBIAS differential TF footprinting stage (footprint_all) ([dc51116](https://github.com/gynecoloji/snakemake_ATACseq/commit/dc5111649c0e42b0d8e5a218f8d13bb2b1b8b3fd))
+
+
+### Fixed
+
+* blacklist-filter the QC RPGC bedgraph to match the main coverage track ([097b044](https://github.com/gynecoloji/snakemake_ATACseq/commit/097b044afb8a969df79934cc7372d948787d6cb4))
+
+
+### Documentation
+
+* add Zenodo DOI badge and citation identifier ([2858a2a](https://github.com/gynecoloji/snakemake_ATACseq/commit/2858a2aae33d91132339dddcc6b5d954ad9fca55))
+* render workflow rulegraph as snakevision tube map ([79b89f7](https://github.com/gynecoloji/snakemake_ATACseq/commit/79b89f7013505547a95d700b07512dd6131580e8))
+
 ## [Unreleased]
 
 ### Added
