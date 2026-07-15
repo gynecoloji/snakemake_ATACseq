@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-14
+
 ### Added
 
 - **Optional TOBIAS TF-footprinting stage** (`footprint_all` target,
@@ -52,5 +54,6 @@ throughout.
   catalog test case, `workflow/envs/` per-rule conda environments, Docker image
   + `run_pipeline.sh`, CI, and `CITATION.cff`.
 
-[Unreleased]: https://github.com/gynecoloji/snakemake_ATACseq/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/gynecoloji/snakemake_ATACseq/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/gynecoloji/snakemake_ATACseq/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/gynecoloji/snakemake_ATACseq/releases/tag/v1.0.0
