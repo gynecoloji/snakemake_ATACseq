@@ -46,12 +46,16 @@ rule qc_all:
         os.path.join(QC_DIR, "atacseq_qc_report.html")
 
 
-# 1. RPGC bedgraph per sample (coverage QC; main pipeline makes bigWigs, not bedgraphs)
+# 1. RPGC bedgraph per sample (coverage QC; main pipeline makes bigWigs, not bedgraphs).
+#    Excludes blacklist regions (matches the main create_bigwig track) so artifactual
+#    blacklist pileups don't skew the RPGC scaling or the QC coverage.
 rule deeptools_bedgraph:
     input:
         bam = os.path.join(RMD_BAM_DIR, "{sample}.nobl.bam")
     output:
         bedgraph = os.path.join(BEDGRAPH_DIR, "{sample}.nobl.RPGC.bedgraph")
+    params:
+        blacklist = config["blacklist"]
     threads: 8
     conda:
         "../envs/deeptools.yaml"
@@ -65,6 +69,7 @@ rule deeptools_bedgraph:
             --effectiveGenomeSize {EGS} \
             --normalizeUsing RPGC \
             --binSize 10 --extendReads \
+            --blackListFileName {params.blacklist} \
             --bam {input.bam} -o {output.bedgraph} 2> {log}
         """
 
