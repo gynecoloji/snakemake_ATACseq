@@ -1,49 +1,53 @@
 [![CI](https://github.com/gynecoloji/snakemake_ATACseq/actions/workflows/ci.yml/badge.svg)](https://github.com/gynecoloji/snakemake_ATACseq/actions/workflows/ci.yml)
 [![DOI](https://zenodo.org/badge/1301075636.svg)](https://doi.org/10.5281/zenodo.21366531)
 
-## Citation
-
-If you use this workflow in your research, please cite it. Use the **"Cite this
-repository"** button on the GitHub repository page (generated from
-[`CITATION.cff`](CITATION.cff)), or cite the archived release on Zenodo via the DOI
-badge above — the concept DOI always resolves to the latest version.
-
-**Please also cite the individual tools used:**
-- **Snakemake**: Köster, J. and Rahmann, S. (2012). Snakemake—a scalable bioinformatics workflow engine. Bioinformatics, 28(19), 2520-2522.
-- **MACS2**: Zhang, Y. et al. (2008). Model-based analysis of ChIP-Seq (MACS). Genome Biology, 9, R137.
-- **deepTools**: Ramírez, F. et al. (2016). deepTools2: a next generation web server for deep-sequencing data analysis. Nucleic Acids Research, 44(W1), W160-W165.
-- **Bowtie2**: Langmead, B. and Salzberg, S.L. (2012). Fast gapped-read alignment with Bowtie 2. Nature Methods, 9, 357-359.
-- **SAMtools**: Li, H. et al. (2009). The Sequence Alignment/Map format and SAMtools. Bioinformatics, 25(16), 2078-2079.
-- **IDR**: Li, Q. et al. (2011). Measuring reproducibility of high-throughput experiments. Annals of Applied Statistics, 5(3), 1752-1779.
-- **featureCounts (Subread)**: Liao, Y. et al. (2014). featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics, 30(7), 923-930.
-- **Consensus peaks (fixed-width / score-per-million)**: Corces, M.R. et al. (2018). The chromatin accessibility landscape of primary human cancers. Science, 362(6413), eaav1898.
-- **BEDTools**: Quinlan, A.R. and Hall, I.M. (2010). BEDTools: a flexible suite of utilities for comparing genomic features. Bioinformatics, 26(6), 841-842.
-- **FastQC**: Andrews, S. (2010). FastQC: a quality control tool for high throughput sequence data.
-- **fastp**: Chen, S. et al. (2018). fastp: an ultra-fast all-in-one FASTQ preprocessor. Bioinformatics, 34(17), i884-i890.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contact
-
-**Author**: gynecoloji  
-**Project Repository**: [https://github.com/gynecoloji/snakemake_ATACseq](https://github.com/gynecoloji/snakemake_ATACseq)
-
-For questions, issues, or feature requests, please:
-1. Check the existing [Issues](https://github.com/gynecoloji/snakemake_ATACseq/issues) on GitHub
-2. Submit a new issue with detailed information about your problem
-3. Include relevant log files and system information for troubleshooting
-
-## Acknowledgments
-
-This pipeline was developed based on best practices from the ENCODE consortium and incorporates methodologies from multiple published ATAC-seq analysis workflows. Special thanks to the developers of all the integrated tools that make this comprehensive analysis possible.
-
----
-
-**Note**: This pipeline is optimized for human genome analysis (hg38) but can be adapted for other organisms by updating reference files and parameters accordingly.# ATAC-seq Analysis Pipeline
+# ATAC-seq Analysis Pipeline
 
 A comprehensive Snakemake workflow for processing and analyzing ATAC-seq data from raw reads to peak calling with extensive quality control metrics and differential binding analysis.
+
+## Quick Start
+
+**Prerequisites**
+
+- **Snakemake + conda/mamba** as the driver — that's the only thing you install. The
+  per-rule tool environments (Bowtie2, MACS2, deepTools, …) are created automatically on
+  the first `--use-conda` run. No local install at all? Use the prebuilt
+  [Docker / Apptainer image](#container-execution-docker--apptainer) instead.
+- **Reference data** in `ref/` — the human genome FASTA, GENCODE GTF, hg38.2bit, and
+  Picard are downloaded once (the ENCODE blacklist and promoter/enhancer BEDs already ship
+  with the repo). See [Reference files: download & generate](#reference-files-download--generate).
+- **Inputs** — paired-end FASTQs in `data/` named `{sample}_R1_001.fastq.gz` /
+  `{sample}_R2_001.fastq.gz`, and a sample sheet `config/samples.csv`
+  (`sample_id,type,group`). See [Data Preparation](#data-preparation).
+
+**Run it**
+
+```bash
+# 1. Get the workflow + a driver environment
+git clone https://github.com/gynecoloji/snakemake_ATACseq.git && cd snakemake_ATACseq
+mamba create -n atacseq -c conda-forge -c bioconda snakemake-minimal pandas
+conda activate atacseq
+
+# 2. Put your reads in data/, edit config/samples.csv + config/config.yaml,
+#    and download the reference data into ref/ (see the links above).
+
+# 3. Dry-run to check the DAG, then run the primary pipeline + QC in one go
+snakemake -s workflow/Snakefile -n
+snakemake -s workflow/Snakefile --use-conda --cores 20
+
+# Run a single stage instead:
+snakemake -s workflow/Snakefile --use-conda --cores 20 atacseq_all   # primary only
+snakemake -s workflow/Snakefile --use-conda --cores 20 qc_all        # QC only (after primary)
+
+# Optional: differential TF footprinting (TOBIAS) — needs a JASPAR motif file (see below)
+snakemake -s workflow/Snakefile --use-conda --cores 16 footprint_all
+```
+
+Downstream **differential binding** (DESeq2, `ATACseq_Dx.ipynb`) runs in the diffbind
+container — see [Differential Analysis](#differential-analysis). For the full walk-through,
+see [Requirements](#requirements), [Installation](#installation),
+[Configuration](#configuration), [Data Preparation](#data-preparation), and
+[Running the Pipeline](#running-the-pipeline).
 
 ## Overview
 
@@ -59,17 +63,19 @@ Both stages live in a single standard-layout `workflow/Snakefile`: one `snakemak
 ## Workflow Diagram
 
 The workflow rule graph, rendered as a "tube map" with
-[snakevision](https://github.com/OpenOmics/snakevision):
+[snakevision](https://github.com/OpenOmics/snakevision) — the primary and QC stages plus
+the optional footprinting branch:
 
 ![ATAC-seq workflow tube map](images/rulegraph.svg)
 
-The same tube map is rendered automatically on the
+The **default** pipeline (primary + QC, without the opt-in footprinting branch) is what the
 [Snakemake Workflow Catalog page](https://snakemake.github.io/snakemake-workflow-catalog/?usage=gynecoloji/snakemake_ATACseq)
-from the executable test case in [`.test/`](.test). Regenerate it with:
+auto-renders from the executable test case in [`.test/`](.test). Regenerate the diagram
+above (all three stages) with:
 
 ```bash
-snakemake -s workflow/Snakefile -c 1 -d .test --forceall --rulegraph > rulegraph.dot
-snakevision -s all atacseq_all qc_all -o images/rulegraph.svg rulegraph.dot
+snakemake -s workflow/Snakefile -c 1 -d .test --forceall --rulegraph dot all footprint_all > rulegraph.dot
+snakevision -s all atacseq_all qc_all footprint_all -o images/rulegraph.svg rulegraph.dot
 ```
 
 ## Features
@@ -152,7 +158,7 @@ The executed notebook is generated from `workflow/scripts/build_diffbind_noteboo
 An **opt-in** [TOBIAS](https://github.com/loosolab/TOBIAS) stage
 (`workflow/rules/footprint.smk`) for **differential transcription-factor footprinting**. It is
 **not** part of the default run — build it explicitly, after the primary pipeline's outputs
-exist:
+exist (its branch is shown in the [workflow diagram](#workflow-diagram) above):
 
 ```bash
 snakemake -s workflow/Snakefile --use-conda --cores 16 footprint_all
@@ -195,6 +201,7 @@ The pipeline requires the following dependencies:
 - **bedtools** + **bc** (genomic interval operations; FRiP / complexity / annotation)
 - **IDR** (reproducibility analysis)
 - **featureCounts / Subread** (fragment quantification over the consensus set)
+- **TOBIAS** (optional footprinting stage)
 
 ### Differential-analysis environment (R / Bioconductor)
 `ATACseq_Dx.ipynb` is an **R** notebook (`ir` kernel), not Python. Run it on the
@@ -223,6 +230,7 @@ ref/
 ├── gencode.v36.annotation.gtf           # GENCODE annotation (TSS, gene models)
 ├── FANTOM5_CAGE_peaks_hg38.bed.gz       # FANTOM5 CAGE peaks (optional; only to rebuild the CAGE set)
 ├── picard.jar                           # Picard (MarkDuplicates)
+├── JASPAR2024_CORE_vertebrates.jaspar   # JASPAR motifs (optional; only for footprint_all)
 │
 │  ── shipped, or generated from the downloads ──
 ├── hg38_blacklist_regions.bed           # ENCODE hg38 blacklist v2                (shipped)
@@ -680,6 +688,8 @@ results/
 │   ├── multiqc_fastqc.html         # FastQC-only MultiQC
 │   ├── tss_enrichment_scores.tsv, peak_summary.tsv
 │   └── blacklist_filtering_stats.txt
+├── footprint/              # Optional TOBIAS stage: per-condition corrected/footprint bigWigs
+│   └── bindetect/          #   differential TF binding (bindetect_results.txt, volcano, per-TF)
 # ── Differential-analysis notebook (ATACseq_Dx.ipynb) outputs ──
 ├── diff_region/            # DESeq2 DB (promoter/distal), PCA, MA/volcano, annotation
 └── browser_tracks/         # Gviz tracks at Notch loci (RPGC bigWigs, PNG + PDF)
@@ -694,7 +704,7 @@ ATAC-seq-Pipeline/                     # Snakemake Workflow Catalog layout
 │   └── README.md           # Configuration reference
 ├── workflow/
 │   ├── Snakefile           # Entry point (unified DAG; targets: atacseq_all, qc_all)
-│   ├── rules/              # common.smk, atacseq.smk, qc.smk
+│   ├── rules/              # common.smk, atacseq.smk, qc.smk, footprint.smk
 │   ├── scripts/            # Python / R scripts used by the rules (+ helpers)
 │   └── envs/               # Per-rule conda environment files
 ├── .snakemake-workflow-catalog.yml    # Catalog metadata (enables snakedeploy)
@@ -771,19 +781,45 @@ logs/
 └── reads_in_annotations/, peak_summary/, multiqc_fastqc/
 ```
 
-## Citing the underlying tools
+## Citation
 
-If you use this pipeline, please also cite the relevant tools:
-- Snakemake: Köster & Rahmann (2012)
-- MACS2: Zhang et al. (2008)
-- deepTools: Ramírez et al. (2016)
-- Bowtie2: Langmead & Salzberg (2012)
-- IDR: Li et al. (2011); featureCounts: Liao et al. (2014); Consensus peaks: Corces et al. (2018)
+If you use this workflow in your research, please cite it. Use the **"Cite this
+repository"** button on the GitHub repository page (generated from
+[`CITATION.cff`](CITATION.cff)), or cite the archived release on Zenodo via the DOI
+badge at the top — the concept DOI always resolves to the latest version.
+
+**Please also cite the individual tools used:**
+- **Snakemake**: Köster, J. and Rahmann, S. (2012). Snakemake—a scalable bioinformatics workflow engine. Bioinformatics, 28(19), 2520-2522.
+- **MACS2**: Zhang, Y. et al. (2008). Model-based analysis of ChIP-Seq (MACS). Genome Biology, 9, R137.
+- **deepTools**: Ramírez, F. et al. (2016). deepTools2: a next generation web server for deep-sequencing data analysis. Nucleic Acids Research, 44(W1), W160-W165.
+- **Bowtie2**: Langmead, B. and Salzberg, S.L. (2012). Fast gapped-read alignment with Bowtie 2. Nature Methods, 9, 357-359.
+- **SAMtools**: Li, H. et al. (2009). The Sequence Alignment/Map format and SAMtools. Bioinformatics, 25(16), 2078-2079.
+- **IDR**: Li, Q. et al. (2011). Measuring reproducibility of high-throughput experiments. Annals of Applied Statistics, 5(3), 1752-1779.
+- **featureCounts (Subread)**: Liao, Y. et al. (2014). featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics, 30(7), 923-930.
+- **Consensus peaks (fixed-width / score-per-million)**: Corces, M.R. et al. (2018). The chromatin accessibility landscape of primary human cancers. Science, 362(6413), eaav1898.
+- **BEDTools**: Quinlan, A.R. and Hall, I.M. (2010). BEDTools: a flexible suite of utilities for comparing genomic features. Bioinformatics, 26(6), 841-842.
+- **FastQC**: Andrews, S. (2010). FastQC: a quality control tool for high throughput sequence data.
+- **fastp**: Chen, S. et al. (2018). fastp: an ultra-fast all-in-one FASTQ preprocessor. Bioinformatics, 34(17), i884-i890.
+- **TOBIAS** (optional footprinting): Bentsen, M. et al. (2020). ATAC-seq footprinting unravels kinetics of transcription factor binding during zygotic genome activation. Nature Communications, 11, 4267.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+This pipeline was developed based on best practices from the ENCODE consortium and incorporates methodologies from multiple published ATAC-seq analysis workflows. Special thanks to the developers of all the integrated tools that make this comprehensive analysis possible.
 
 ## Contact
 
-For questions or issues with this pipeline, please refer to the individual tool documentation or submit an issue to the repository.
+**Author**: gynecoloji  
+**Project Repository**: [https://github.com/gynecoloji/snakemake_ATACseq](https://github.com/gynecoloji/snakemake_ATACseq)
+
+For questions, issues, or feature requests, please:
+1. Check the existing [Issues](https://github.com/gynecoloji/snakemake_ATACseq/issues) on GitHub
+2. Submit a new issue with detailed information about your problem
+3. Include relevant log files and system information for troubleshooting
 
 ---
 
-**Note**: This pipeline is optimized for human genome analysis (hg38) but can be adapted for other organisms by updating reference files and parameters.
+**Note**: This pipeline is optimized for human genome analysis (hg38) but can be adapted for other organisms by updating reference files and parameters accordingly.
