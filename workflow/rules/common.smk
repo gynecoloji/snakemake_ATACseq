@@ -52,6 +52,24 @@ RELAXED_DIR    = f"{RESULT_DIR}/qc_relaxed_peaks"
 COMPLEXITY_DIR = f"{RESULT_DIR}/library_complexity"
 ANNOT_DIR      = f"{RESULT_DIR}/peak_annotation"
 
+# ── Differential openness (optional stage; see rules/diffopen.smk) ──────
+DIFFOPEN_DIR   = f"{RESULT_DIR}/diffopen"
+# Spike-in-free normalizations run by `diffopen_all`. Each writes its own
+# directory under results/diffopen/ so the modes can be compared:
+#   none  - DESeq2 median-of-ratios over all consensus peaks (baseline)
+#   ctcf  - median-of-ratios restricted to constitutive CTCF anchors (spike-in free)
+# Add "rnastable" (needs an RNA-seq DE table via diffopen_rna_table) to also
+# anchor on transcriptionally-stable promoters.
+DIFFOPEN_MODES = config.get("diffopen_modes", ["none", "ctcf"])
+
+# rnastable needs an RNA-seq DE table; fail fast at DAG-build time with a clear
+# message rather than deep in a job if it is requested but not configured.
+if "rnastable" in DIFFOPEN_MODES and not config.get("diffopen_rna_table"):
+    raise ValueError(
+        "diffopen_modes includes 'rnastable' but 'diffopen_rna_table' is unset. "
+        "Point diffopen_rna_table at your RNA-seq DESeq2/edgeR results table."
+    )
+
 # ── Reference data / config ─────────────────────────────────────────────
 GENOME_2BIT  = os.path.join("ref", "hg38.2bit")   # QC: computeGCBias --genome
 GTF_FILE     = config["gtf"]
@@ -109,3 +127,47 @@ FASTP_ADAPTER_ARGS = _fastp_adapter_args()
 
 def _group_relaxed_inputs(wildcards):
     return [f"{RELAXED_PEAKS_DIR}/{s}_relaxed.narrowPeak" for s in GROUPS[wildcards.group]]
+
+
+# ── Differential-openness helpers (rules/diffopen.smk) ──────────────────
+def _diffopen_track_bigwigs(wildcards):
+    """bigWigs for the Gviz tracks of one mode: each mode has a per-sample scalar
+    size factor, so its tracks use its own size-factor-scaled set (matching the
+    differential test that picked the region)."""
+    if wildcards.mode in DIFFOPEN_MODES:
+        return expand(
+            f"{DIFFOPEN_DIR}/{wildcards.mode}/bigwig/{{sample}}.bw", sample=SAMPLES
+        )
+    return expand(f"{BIGWIG_DIR}/{{sample}}.bw", sample=SAMPLES)
+
+
+def _diffopen_track_bwdir(wildcards):
+    """Directory matching _diffopen_track_bigwigs (the R script globs it)."""
+    return (
+        f"{DIFFOPEN_DIR}/{wildcards.mode}/bigwig"
+        if wildcards.mode in DIFFOPEN_MODES
+        else BIGWIG_DIR
+    )
+
+
+def _diffopen_extra_input(wildcards):
+    """Mode-specific extra input for the `diffopen` rule.
+
+    none      -> no extra input (DESeq2 median-of-ratios over all peaks)
+    ctcf      -> the constitutive-CTCF anchor BED
+    rnastable -> the RNA-seq DE table and the gene-models RDS
+    """
+    if wildcards.mode == "ctcf":
+        return {"ctcf": config.get("ctcf_bed", "ref/constitutive_ctcf_hg38.bed")}
+    if wildcards.mode == "rnastable":
+        rna_table = config.get("diffopen_rna_table")
+        if not rna_table:
+            raise ValueError(
+                "diffopen mode 'rnastable' requires 'diffopen_rna_table' to be set "
+                "(path to the RNA-seq DE results table)."
+            )
+        return {
+            "rna_table": rna_table,
+            "models": f"{DIFFOPEN_DIR}/gene_models.rds",
+        }
+    return {}

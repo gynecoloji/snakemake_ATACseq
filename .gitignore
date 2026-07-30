@@ -76,3 +76,6 @@ ehthumbs.db
 !.test/ref/*.gtf
 !.test/ref/*.2bit
 
+
+# ENCODE CTCF ChIP-seq downloads (cache for build_constitutive_ctcf.py)
+ref/encode_ctcf/

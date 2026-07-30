@@ -1,0 +1,90 @@
+# Native Apptainer build of the ATAC-seq workflow image.
+#
+# Mirrors the Dockerfile, for HPC users who have Apptainer but no Docker:
+#   module load apptainer
+#   apptainer build --fakeroot atacseq.sif apptainer.def   # run from repo root
+#   apptainer run atacseq.sif -s workflow/Snakefile --cores 16
+#
+# Ships Snakemake plus the pre-built per-rule conda envs (snakemake, deeptools,
+# macs2, idr, bedtools, tobias, r-diffopen) at /opt/wf-conda, and runs with
+# --use-conda. The R env (DESeq2/ChIPseeker/Gviz) and tobias make the build
+# notably slower — Bioconductor solves are heavy — but the one image then covers
+# the primary pipeline, QC, differential openness, and footprinting.
+#
+# Genomes/FASTQs are NOT baked in: bind-mount your project at runtime.
+
+Bootstrap: docker
+From: condaforge/miniforge3:latest
+
+%files
+    workflow /workflow/
+    config /workflow/
+    tests /workflow/
+    create_envs.smk /workflow/
+
+%post
+    set -eu
+    export DEBIAN_FRONTEND=noninteractive
+    export WF_CONDA_PREFIX=/opt/wf-conda
+
+    # Minimal system deps (git helps Snakemake's conda handling; procps for subprocesses).
+    # Under `apptainer build --fakeroot` the apt sandbox user (_apt) cannot be assumed
+    # (setgroups/seteuid are blocked in the user namespace), so tell apt to stay root
+    # for the download/install.
+    printf 'APT::Sandbox::User "root";\n' > /etc/apt/apt.conf.d/00no-sandbox
+    apt-get update
+    apt-get install -y --no-install-recommends git procps ca-certificates
+    rm -rf /var/lib/apt/lists/*
+
+    # FLEXIBLE channel priority: the env files are fully-pinned exports whose exact
+    # builds span conda-forge/bioconda/defaults, so strict priority would wrongly
+    # exclude pins living in a lower-priority channel. Also accept the Anaconda
+    # "defaults" ToS so the non-interactive solve does not stall.
+    conda config --system --set channel_priority flexible
+    conda tos accept --override-channels \
+        --channel https://repo.anaconda.com/pkgs/main \
+        --channel https://repo.anaconda.com/pkgs/r 2>/dev/null || true
+
+    # Snakemake driver in its OWN env: the miniforge base pins Python 3.13, but
+    # snakemake-minimal 9.3.2 needs Python <3.13. pandas is required because the
+    # Snakefiles import it at parse time.
+    mamba create -y -n driver -c conda-forge -c bioconda \
+        python=3.12 snakemake-minimal=9.3.2 pandas
+    mamba clean -afy
+    export PATH=/opt/conda/envs/driver/bin:$PATH
+
+    # Pre-build every per-rule conda env INTO the image, keyed by env-file content
+    # so they are reused at runtime via --conda-prefix.
+    cd /workflow
+    snakemake -s create_envs.smk --use-conda --conda-create-envs-only \
+        --conda-frontend mamba --conda-prefix "$WF_CONDA_PREFIX" --cores 1
+    mamba clean -afy
+    rm -rf /workflow/build /workflow/.snakemake
+
+%environment
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export WF_CONDA_PREFIX=/opt/wf-conda
+    export PATH=/opt/conda/envs/driver/bin:$PATH
+
+%runscript
+    exec snakemake --use-conda --conda-frontend mamba \
+        --conda-prefix /opt/wf-conda "$@"
+
+%labels
+    org.opencontainers.image.title atacseq-snakemake
+    org.opencontainers.image.description ATAC-seq (depth-normalized) + consensus + QC + diffopen + footprinting (Snakemake, --use-conda)
+    org.opencontainers.image.source https://github.com/gynecoloji/snakemake_ATACseq
+
+%help
+    ATAC-seq (depth-normalized) + consensus peaks + QC, plus the opt-in
+    differential-openness and TF-footprinting stages (Snakemake, one image).
+
+    Run from your project directory (Apptainer auto-mounts the CWD):
+      apptainer run atacseq.sif -s workflow/Snakefile --cores 16               # primary -> QC
+      apptainer run atacseq.sif -s workflow/Snakefile --cores 16 atacseq_all   # primary only
+      apptainer run atacseq.sif -s workflow/Snakefile --cores 8  qc_all        # QC only
+      apptainer run atacseq.sif -s workflow/Snakefile --cores 20 diffopen_all  # differential openness
+      apptainer run atacseq.sif -s workflow/Snakefile --cores 16 footprint_all # TF footprinting
+
+    Reference genomes/annotation must be present under ref/ (see config/README.md).

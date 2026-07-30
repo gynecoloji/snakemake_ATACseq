@@ -1,11 +1,13 @@
 # ATAC-seq (depth-normalized) + consensus + QC — Snakemake Workflow Catalog
 # entry point. A single `snakemake --use-conda` builds the primary pipeline AND
 # the QC report in dependency order (unified DAG). Run a subset with the
-# `atacseq_all` or `qc_all` targets:
+# `atacseq_all` or `qc_all` targets; two heavier analyses are opt-in:
 #
 #   snakemake --use-conda --cores 20                 # everything (primary → QC)
 #   snakemake --use-conda --cores 20 atacseq_all     # primary pipeline only
 #   snakemake --use-conda --cores 20 qc_all          # QC only (after primary)
+#   snakemake --use-conda --cores 20 diffopen_all    # differential openness (opt-in)
+#   snakemake --use-conda --cores 16 footprint_all   # TF footprinting (opt-in)
 #
 # Reference genomes/annotation are provided by the user under ref/ (see README).
 
@@ -20,12 +22,14 @@ configfile: "config/config.yaml"
 include: "rules/common.smk"
 include: "rules/atacseq.smk"
 include: "rules/qc.smk"
+include: "rules/diffopen.smk"
 include: "rules/footprint.smk"
 
 
-# Default target = primary pipeline + QC. The optional TOBIAS footprinting stage
-# (rules/footprint.smk) is deliberately NOT included here; run it on demand with
-# the `footprint_all` target once the primary pipeline's outputs exist.
+# Default target = primary pipeline + QC. The optional differential-openness
+# (rules/diffopen.smk) and TOBIAS footprinting (rules/footprint.smk) stages are
+# deliberately NOT included here; run them on demand with the `diffopen_all` /
+# `footprint_all` targets once the primary pipeline's outputs exist.
 rule all:
     input:
         rules.atacseq_all.input,

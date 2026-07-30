@@ -19,9 +19,10 @@ DAG** covering two stages in dependency order:
 2. **QC** (`qc_all` target) — deepTools QC, FRiP, IDR, library complexity,
    TSS enrichment, and an interactive HTML QC report.
 
-An **optional** third stage, **TF footprinting** (`footprint_all` target,
-`workflow/rules/footprint.smk`), is **not** in the default DAG — run it on demand
-after the primary stage (see [Steps (footprinting stage, optional)](#steps-footprinting-stage-optional)).
+Two **optional** stages are **not** in the default DAG — run them on demand after
+the primary stage: **differential openness** (`diffopen_all`,
+`workflow/rules/diffopen.smk`) and **TF footprinting** (`footprint_all`,
+`workflow/rules/footprint.smk`). See the per-stage step sections below.
 
 ## Inputs
 
@@ -62,6 +63,28 @@ TSS-enrichment score, FRiP, IDR on relaxed peaks, library complexity
 (NRF/PBC1/PBC2), reads-in-annotation and peak summaries, a FastQC-only MultiQC
 report, and a self-contained interactive HTML QC report
 (`results/qc/atacseq_qc_report.html`).
+
+## Steps (differential-openness stage, optional)
+
+Opt-in DESeq2 differential chromatin openness (`diffopen_all` target) on the
+consensus count matrix; contrast from the sample sheet's `type` column (reference
+= `diffopen_ref_label`). Runs under spike-in-free normalization modes
+(`diffopen_modes`, default `none` + `ctcf`), each in its own
+`results/diffopen/<mode>/` directory. Because there is no spike-in, every mode
+treats its anchor set as invariant and cannot detect a uniform global shift —
+read the results as relative and compare modes.
+
+1. **`diffopen`** (per mode) — DESeq2 size factors (`none` = median-of-ratios over
+   all peaks; `ctcf` = restricted to constitutive CTCF anchors), promoter/enhancer/
+   all split, MA plot, nominal p05/p01 subsets, `run_summary.txt`.
+2. **`diffopen_annotate`** — nearest-TSS gene assignment (ChIPseeker) per mode.
+3. **`diffopen_enrich`** — offline GO enrichment (clusterProfiler) per mode.
+4. **`diffopen_bigwig`** + **`diffopen_tracks`** — per-mode size-factor-scaled
+   bigWigs and Gviz browser tracks for the top regions.
+5. **`diffopen_report`** — `results/diffopen/diffopen_report.html` comparing the
+   normalizations side by side.
+
+Run with: `snakemake -s workflow/Snakefile --use-conda --cores N diffopen_all`.
 
 ## Steps (footprinting stage, optional)
 

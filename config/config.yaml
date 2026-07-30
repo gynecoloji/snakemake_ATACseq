@@ -51,3 +51,28 @@ enhancer_bed: "ref/enhancer_chr1-22X.bed"
 # footprint_all target. Download the JASPAR CORE vertebrates PFMs into ref/ (see
 # the README "Footprinting" section).
 jaspar_motifs: "ref/JASPAR2024_CORE_vertebrates.jaspar"
+
+# ── Optional differential-openness stage (workflow/rules/diffopen.smk, diffopen_all) ──
+# Constitutive-CTCF anchor set used by the `ctcf` normalization mode. Built by
+# workflow/scripts/build_constitutive_ctcf.py as the union of ENCODE CTCF ChIP-seq
+# peaks across ~59 diverse cell types, keeping regions bound in >=90% of them
+# (portable to any human sample). NOTE: do NOT point this at
+# ref/GRCh38-cCREs.CTCF-only.bed — SCREEN's CA-CTCF class excludes CTCF sites at
+# promoters/enhancers and is a poor normalization anchor.
+ctcf_bed: "ref/constitutive_ctcf_hg38.bed"
+# Which spike-in-free normalizations to run for `diffopen_all`. Each writes its
+# own results/diffopen/<mode>/ directory so the modes can be compared:
+#   none - DESeq2 median-of-ratios over all peaks (baseline)
+#   ctcf - median-of-ratios restricted to CTCF anchors (spike-in free)
+# Add "rnastable" (needs diffopen_rna_table) to also anchor on stable promoters.
+diffopen_modes: ["none", "ctcf"]
+diffopen_ref_label: "Control"        # reference level of the `type` column (contrast denominator)
+# `ctcf` mode: iteratively drop anchors that actually MOVED between conditions
+# (>|trim_k| MADs from the median shift) and re-estimate on the survivors.
+ctcf_trim_k: 2.5                     # MAD multiplier; set very large to disable trimming
+ctcf_trim_iter: 2                    # trim/re-estimate iterations (0 = no trimming)
+# Downstream of the DA tables: gene assignment, GO enrichment, browser tracks
+diffopen_min_genes: 10               # gate: sets with <= this many genes are skipped
+diffopen_go_ont: "BP"                # GO ontology for clusterProfiler (BP/MF/CC)
+diffopen_track_tier: "p01"           # which tier to draw Gviz tracks for
+diffopen_track_top: 5                # top N up and N down regions per class

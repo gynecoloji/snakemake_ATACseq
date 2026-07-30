@@ -1,0 +1,23 @@
+# R / Bioconductor environment for the differential-openness rules
+# (diffopen.R, diffopen_tracks.R, diffopen_enrich.R).
+#
+# DESeq2 pulls most of the Bioconductor core; the rest are for the reporting
+# extras: Gviz + rtracklayer + txdbmaker for genome-browser tracks, and
+# clusterProfiler + org.Hs.eg.db for OFFLINE GO enrichment (deliberately not
+# Enrichr/gseapy, which would need network access at runtime).
+name: r-diffopen
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.3
+  - bioconductor-deseq2
+  - bioconductor-apeglm
+  - bioconductor-genomicranges
+  - bioconductor-iranges
+  - bioconductor-rtracklayer
+  - bioconductor-gviz
+  - bioconductor-genomicfeatures
+  - bioconductor-org.hs.eg.db
+  - bioconductor-clusterprofiler
+  - r-ggplot2

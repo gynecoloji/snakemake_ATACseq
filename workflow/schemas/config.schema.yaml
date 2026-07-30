@@ -134,6 +134,118 @@ properties:
       (see README). Not used by the primary or QC pipelines.
     default: ref/JASPAR2024_CORE_vertebrates.jaspar
 
+  ctcf_bed:
+    type: string
+    description: >-
+      Constitutive-CTCF anchor BED used by the `ctcf` differential-openness
+      normalization. Built by workflow/scripts/build_constitutive_ctcf.py: the
+      union of ENCODE CTCF ChIP-seq peaks across ~59 cell types, restricted to
+      regions bound in >=90% of them. Genome coordinates only, so it is reusable
+      for any human sample.
+    default: ref/constitutive_ctcf_hg38.bed
+  diffopen_modes:
+    type: array
+    items:
+      type: string
+      enum: [none, ctcf, rnastable]
+    description: >-
+      Spike-in-free normalization modes run by the opt-in `diffopen_all` target,
+      each written to its own results/diffopen/<mode>/ directory: `none` = DESeq2
+      median-of-ratios over all peaks, `ctcf` = median-of-ratios restricted to
+      CTCF anchors, `rnastable` = median-of-ratios restricted to promoter-class
+      peaks over the TSS window of RNA-seq-stable genes (needs diffopen_rna_table).
+    default: [none, ctcf]
+  diffopen_ref_label:
+    type: string
+    description: >-
+      Reference level of the sample sheet's `type` column (the denominator of the
+      contrast), e.g. "Control" for a NICD3-vs-Control comparison.
+    default: Control
+  ctcf_trim_k:
+    type: number
+    minimum: 0
+    description: >-
+      `ctcf` mode: MAD multiplier for the invariance trim — anchors whose
+      between-condition shift is more than this many MADs from the median shift
+      are dropped before re-estimating size factors. Large values disable it.
+    default: 2.5
+  ctcf_trim_iter:
+    type: integer
+    minimum: 0
+    description: >-
+      `ctcf` mode: number of trim / re-estimate iterations (0 = no trimming).
+    default: 2
+  diffopen_rna_table:
+    type: string
+    description: >-
+      Path to the RNA-seq DESeq2/edgeR results table (TSV, or CSV by extension)
+      used by the `rnastable` normalization. Required when `rnastable` is in
+      diffopen_modes. Must contain the gene, log2FoldChange, padj and baseMean
+      columns named by the diffopen_rna_*_col parameters.
+  diffopen_rna_gene_col:
+    type: string
+    description: Column in diffopen_rna_table holding the gene symbol (matched to GTF gene_name).
+    default: gene
+  diffopen_rna_lfc_col:
+    type: string
+    description: Column in diffopen_rna_table holding the log2 fold change.
+    default: log2FoldChange
+  diffopen_rna_padj_col:
+    type: string
+    description: Column in diffopen_rna_table holding the adjusted p-value.
+    default: padj
+  diffopen_rna_basemean_col:
+    type: string
+    description: Column in diffopen_rna_table holding mean expression.
+    default: baseMean
+  diffopen_rna_basemean_min:
+    type: number
+    minimum: 0
+    description: >-
+      `rnastable`: minimum baseMean for a gene to be an eligible stable anchor
+      (excludes underpowered low-count genes).
+    default: 10
+  diffopen_rna_padj_min:
+    type: number
+    minimum: 0
+    maximum: 1
+    description: >-
+      `rnastable`: a gene counts as non-significant (stable) when padj >= this
+      (or padj is NA). Higher = stricter "clearly unchanged" bar.
+    default: 0.5
+  diffopen_rna_lfc_max:
+    type: number
+    minimum: 0
+    description: '`rnastable`: maximum |log2FoldChange| for a gene to count as stable.'
+    default: 0.5
+  diffopen_rna_tss_window:
+    type: integer
+    minimum: 0
+    description: '`rnastable`: half-width (bp) of the TSS window used to link a stable gene to peaks.'
+    default: 2000
+  diffopen_rna_min_anchors:
+    type: integer
+    minimum: 1
+    description: '`rnastable`: refuse to normalize on fewer than this many anchor peaks.'
+    default: 100
+  diffopen_rna_promoter_class_required:
+    type: boolean
+    description: >-
+      `rnastable`: require anchor peaks to be promoter-class (Ensembl Regulatory
+      Build) in addition to overlapping a stable-gene TSS window. Set false to
+      relax to TSS-window overlap only when the strict set is too small.
+    default: true
+  rnastable_trim_k:
+    type: number
+    minimum: 0
+    description: '`rnastable`: MAD multiplier for the invariance trim (as ctcf_trim_k).'
+    default: 2.5
+  rnastable_trim_iter:
+    type: integer
+    minimum: 0
+    description: '`rnastable`: number of trim / re-estimate iterations (0 = no trimming).'
+    default: 2
+
 required:
   - samples_table
   - human_fasta
