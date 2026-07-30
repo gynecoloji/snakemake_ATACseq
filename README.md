@@ -475,99 +475,75 @@ snakemake -s workflow/Snakefile --use-conda \
 
 ### Container Execution (Docker / Apptainer)
 
-One prebuilt image covers the **whole** workflow — primary pipeline, QC, differential
-openness, and footprinting — via its baked-in per-rule conda envs (including `r-diffopen`
-and `tobias`). You install nothing except Docker or Apptainer:
-
-| Image | Contents | Used for |
-|---|---|---|
-| **`gynecoloji/atacseq`** | Snakemake + all per-rule conda envs (deeptools, macs2, idr, bedtools, tobias, r-diffopen) | the entire workflow (`atacseq_all`, `qc_all`, `diffopen_all`, `footprint_all`) |
-
-**Download** — pull with Docker, or convert to a local `.sif` once for Apptainer /
-Singularity (HPC):
-
-```bash
-# Docker
-docker pull gynecoloji/atacseq:latest
-
-# Apptainer / Singularity  (writes ./atacseq.sif in the current directory)
-apptainer pull atacseq.sif docker://gynecoloji/atacseq:latest
-```
-
-Apptainer users without Docker can instead **build natively** from the shipped
-[`apptainer.def`](apptainer.def) (pre-bakes every conda env; slower — Bioconductor solves
-are heavy):
-
-```bash
-module load apptainer          # or otherwise put apptainer on PATH
-apptainer build --fakeroot atacseq.sif apptainer.def   # from the repo root
-```
-
-Genomes/FASTQs are **not** baked into the image; you mount your project directory at run
-time (see [`DOCKER.md`](DOCKER.md) for the exact `ref/` and `data/` files the container
-expects). A single run builds the primary stage then QC (unified DAG); the opt-in
-`diffopen_all` and `footprint_all` targets run in the same image.
+One container covers the **whole** workflow — primary pipeline, QC, differential openness,
+and footprinting — via its baked-in per-rule conda envs (`deeptools`, `macs2`, `idr`,
+`bedtools`, `tobias`, `r-diffopen`). Genomes/FASTQs are **not** baked in; you mount your
+project directory at run time (see [`DOCKER.md`](DOCKER.md) for the exact `ref/` and
+`data/` files it expects).
 
 The image's entrypoint is
 `snakemake --use-conda --conda-frontend mamba --conda-prefix /opt/wf-conda`, so anything
-you pass after the image name goes straight to `snakemake` (e.g. `-s workflow/Snakefile
---cores N`, an optional `atacseq_all`/`qc_all` target, or `-n` for a dry run).
+after the image goes straight to `snakemake` (e.g. `-s workflow/Snakefile --cores N`, an
+`atacseq_all` / `qc_all` / `diffopen_all` / `footprint_all` target, or `-n` for a dry run).
 
-#### Docker
+#### Apptainer / Singularity (HPC) — prebuilt image
+
+A prebuilt image is published on Docker Hub as an **Apptainer/ORAS artifact**. Pull it with
+Apptainer — note the `oras://` scheme; it is a SIF, **not** a `docker pull`-able image:
 
 ```bash
-# Pull the published image (or run `docker compose build` to build it locally)
-docker pull gynecoloji/atacseq:latest
-
-# Run from your project directory (which holds workflow/, config/, ref/, data/):
-# Everything (primary stage → QC report) in one dependency-ordered run:
-docker run --rm -v "$(pwd)":/workflow -e HOME=/tmp --user "$(id -u):$(id -g)" \
-    gynecoloji/atacseq:latest -s workflow/Snakefile --cores 16
-
-# Or just one stage: append the atacseq_all or qc_all target
-docker run --rm -v "$(pwd)":/workflow -e HOME=/tmp --user "$(id -u):$(id -g)" \
-    gynecoloji/atacseq:latest -s workflow/Snakefile --cores 16 qc_all
-
-# dry run: append  -n
+module load apptainer          # or otherwise put apptainer on PATH
+apptainer pull atacseq.sif oras://docker.io/gynecoloji/atacseq-pipeline:latest
 ```
 
-Convenience wrappers `docker compose` and `./run_pipeline.sh` are also provided:
+Or build it yourself from the shipped [`apptainer.def`](apptainer.def) (pre-bakes every
+conda env; slower — Bioconductor solves are heavy):
+
+```bash
+apptainer build --fakeroot atacseq.sif apptainer.def   # from the repo root
+```
+
+Run from your project directory (Apptainer auto-mounts `$HOME`, `/tmp`, and the current
+directory, and runs as you — no `--user`):
+
+```bash
+apptainer run atacseq.sif -s workflow/Snakefile --cores 16               # primary → QC
+apptainer run atacseq.sif -s workflow/Snakefile --cores 16 qc_all        # one stage (add -n to dry-run)
+apptainer run atacseq.sif -s workflow/Snakefile --cores 20 diffopen_all  # differential openness
+apptainer run atacseq.sif -s workflow/Snakefile --cores 16 footprint_all # TF footprinting
+```
+
+Notes:
+- **References/data outside the project dir:** bind them in —
+  `--bind /scratch/genomes:/scratch/genomes` — and point `config/config.yaml` at the bound paths.
+- **Pre-built envs:** all per-rule conda environments are baked at `/opt/wf-conda`
+  (read-only in the SIF) and reused via `--conda-prefix`. If Apptainer reports a
+  read-only error writing there, add `--writable-tmpfs`.
+
+#### Docker (build locally)
+
+The published image is an Apptainer SIF, so there is no `docker pull` for it — Docker users
+build the image from the repo's `Dockerfile` (a few GB; ~15–30 min the first time):
+
+```bash
+docker compose build                 # or:  docker build -t atacseq .
+```
+
+Then run from your project directory (which holds workflow/, config/, ref/, data/):
+
+```bash
+docker run --rm -v "$(pwd)":/workflow -e HOME=/tmp --user "$(id -u):$(id -g)" \
+    atacseq -s workflow/Snakefile --cores 16            # primary → QC
+docker run --rm -v "$(pwd)":/workflow -e HOME=/tmp --user "$(id -u):$(id -g)" \
+    atacseq -s workflow/Snakefile --cores 16 qc_all     # one stage; add -n for a dry run
+```
+
+Convenience wrappers are also provided:
 
 ```bash
 ./run_pipeline.sh --cores 16                 # everything (primary → QC)
 docker compose run --rm atacseq --cores 16 qc_all
 ```
-
-#### Apptainer / Singularity (HPC)
-
-On clusters without Docker, convert the image to a SIF once and run it with Apptainer.
-Apptainer auto-mounts `$HOME`, `/tmp`, and the current directory, and runs as you (no
-`--user` needed):
-
-```bash
-# One-time: build a local .sif from the Docker Hub image
-apptainer pull atacseq.sif docker://gynecoloji/atacseq:latest
-
-# Run from your project directory (everything: primary stage → QC report):
-apptainer exec atacseq.sif \
-    snakemake --use-conda --conda-frontend mamba --conda-prefix /opt/wf-conda \
-    -s workflow/Snakefile --cores 16
-
-# Or just one stage: append the atacseq_all or qc_all target
-apptainer exec atacseq.sif \
-    snakemake --use-conda --conda-frontend mamba --conda-prefix /opt/wf-conda \
-    -s workflow/Snakefile --cores 16 qc_all
-```
-
-Notes:
-- **References/data outside the project dir:** if `ref/` genomes live elsewhere (e.g. on
-  scratch), bind them in — `--bind /scratch/genomes:/scratch/genomes` — and point
-  `config/config.yaml` at the bound paths.
-- **Pre-built envs:** the five conda environments are baked at `/opt/wf-conda`
-  (read-only in the SIF) and reused via `--conda-prefix`. If Apptainer reports a
-  read-only error writing there, add `--writable-tmpfs` to the `apptainer exec` command.
-- `apptainer run atacseq.sif -s workflow/Snakefile --cores 16` also works — it
-  invokes the same entrypoint.
 
 ## Deploying with snakedeploy
 
