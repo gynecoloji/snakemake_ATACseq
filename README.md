@@ -64,18 +64,20 @@ Both stages live in a single standard-layout `workflow/Snakefile`: one `snakemak
 
 The workflow rule graph, rendered as a "tube map" with
 [snakevision](https://github.com/OpenOmics/snakevision) — the primary and QC stages plus
-the optional footprinting branch:
+the optional differential-openness and footprinting branches:
 
 ![ATAC-seq workflow tube map](images/rulegraph.svg)
 
-The **default** pipeline (primary + QC, without the opt-in footprinting branch) is what the
+The **default** pipeline (primary + QC, without the opt-in `diffopen`/footprinting branches)
+is what the
 [Snakemake Workflow Catalog page](https://snakemake.github.io/snakemake-workflow-catalog/?usage=gynecoloji/snakemake_ATACseq)
-auto-renders from the executable test case in [`.test/`](.test). Regenerate the diagram
-above (all three stages) with:
+auto-renders from the executable test case in [`.test/`](.test). Regenerate the full diagram
+above with the reference/data files in place (the opt-in stages declare their scripts as
+inputs, so name the targets **before** `--rulegraph`):
 
 ```bash
-snakemake -s workflow/Snakefile -c 1 -d .test --forceall --rulegraph dot all footprint_all > rulegraph.dot
-snakevision -s all atacseq_all qc_all footprint_all -o images/rulegraph.svg rulegraph.dot
+snakemake -s workflow/Snakefile -c 1 all diffopen_all footprint_all --forceall --rulegraph > rulegraph.dot
+snakevision -s all atacseq_all qc_all diffopen_all footprint_all -o images/rulegraph.svg rulegraph.dot
 ```
 
 ## Features
